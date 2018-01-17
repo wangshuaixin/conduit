@@ -73,7 +73,7 @@ where
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         self.inner.poll().or_else(|e| {
-            error!("turning h2 error into 500: {:?}", e);
+            error!("turning service error into 500: {:?}", e);
             let response = http::Response::builder()
                 .status(500)
                 .body(Default::default())
