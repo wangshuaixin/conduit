@@ -15,6 +15,7 @@ import (
 	tapPb "github.com/runconduit/conduit/controller/gen/controller/tap"
 	telemPb "github.com/runconduit/conduit/controller/gen/controller/telemetry"
 	pb "github.com/runconduit/conduit/controller/gen/public"
+	"github.com/runconduit/conduit/controller/util"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/metadata"
 )
@@ -47,14 +48,36 @@ func NewServer(addr string, telemetryClient telemPb.TelemetryClient, tapClient t
 			Name: "http_requests_total",
 			Help: "A counter for requests to the wrapped handler.",
 		},
-		[]string{"code", "method"},
+		[]string{"code"},
 	)
-	prometheus.MustRegister(counter)
+
+	duration := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_request_duration_seconds",
+			Help:    "A histogram of latencies for requests in seconds.",
+			Buckets: util.RequestDurationBucketsSeconds,
+		},
+		[]string{"code"},
+	)
+
+	responseSize := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_response_size_bytes",
+			Help:    "A histogram of response sizes for requests.",
+			Buckets: util.ResponseSizeBuckets,
+		},
+		[]string{},
+	)
+
+	prometheus.MustRegister(counter, duration, responseSize)
 
 	baseHandler = &handler{
 		grpcServer: newGrpcServer(telemetryClient, tapClient),
 	}
-	instrumentedHandler := promhttp.InstrumentHandlerCounter(counter, baseHandler)
+
+	instrumentedHandler := promhttp.InstrumentHandlerDuration(duration,
+		promhttp.InstrumentHandlerResponseSize(responseSize,
+			promhttp.InstrumentHandlerCounter(counter, baseHandler)))
 
 	return &http.Server{
 		Addr:    addr,
