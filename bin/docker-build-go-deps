@@ -1,13 +1,16 @@
 #!/bin/sh
 
+# Builds (or pulls) our go-deps docker image.
+
 set -eu
 
 . bin/_docker.sh
 . bin/_tag.sh
 
-image=$(docker_maybe_build . \
-    "$(docker_repo go-deps)" \
-    "$(go_deps_sha)" \
-    Dockerfile-go-deps)
+export tag=$(go_deps_sha)
 
-echo "$image"
+if (docker_pull go-deps "${tag}" 1>&2); then
+    echo "$(docker_repo go-deps):${tag}"
+else
+    docker_build go-deps "${tag}" Dockerfile-go-deps
+fi

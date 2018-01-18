@@ -19,12 +19,12 @@ dir_tag() {
     echo "git-$(git log -n 1 --format="%h" "$dir")"
 }
 
-clean_head_root_tag() {
+head_root_tag() {
+    sha=$(git_sha HEAD)
     if git diff-index --quiet HEAD -- ; then
-        echo "git-$(git_sha HEAD)"
+        echo "git-$sha"
     else
-        echo "Commit unstaged changes or set an explicit build tag." >&2
-        exit 3
+        echo "$USER-$sha"
     fi
 }
 

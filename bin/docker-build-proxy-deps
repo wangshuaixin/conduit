@@ -1,13 +1,16 @@
 #!/bin/sh
 
+# Builds (or pulls) our proxy-deps docker image.
+
 set -eu
 
 . bin/_docker.sh
 . bin/_tag.sh
 
-image=$(docker_maybe_build . \
-    "$(docker_repo proxy-deps)" \
-    "$(proxy_deps_sha)" \
-    proxy/Dockerfile-deps)
+export tag=$(proxy_deps_sha)
 
-echo "$image"
+if (docker_pull proxy-deps "${tag}" 1>&2); then
+    echo "$(docker_repo proxy-deps):${tag}"
+else
+    docker_build proxy-deps "${tag}" Dockerfile-proxy-deps
+fi

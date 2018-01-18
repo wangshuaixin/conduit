@@ -106,17 +106,18 @@ jobs:
       before_script:
         - gcloud docker --authorize-only
         - bin/docker-pull-deps
+        - bin/docker-pull master
         - |
-          export CONDUIT_TAG=$(. bin/_tag.sh ; clean_head_root_tag)
+          export CONDUIT_TAG=$(bin/root-tag)
           echo "CONDUIT_TAG=${CONDUIT_TAG}"
         - export PROXY_RELEASE=1 BUILD_DEBUG=1 DOCKER_TRACE=1
 
       script:
-        - bin/docker-build $CONDUIT_TAG
+        - bin/docker-build
 
       after_success:
         - bin/docker-push-deps
-        - bin/docker-push $CONDUIT_TAG
+        - bin/docker-push
         - bin/docker-retag-all $CONDUIT_TAG master && bin/docker-push master
         - target/cli/linux/conduit install --version=$CONDUIT_TAG |tee conduit.yml
         - kubectl -n conduit apply -f conduit.yml --prune --selector='conduit.io/plane=control'

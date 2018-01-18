@@ -3,17 +3,16 @@
 set -eu
 
 . bin/_tag.sh
+. bin/_docker.sh
 
 if [ $# -eq 0 ]; then
-    tag="$(clean_head_root_tag)"
+    tag="$(head_root_tag)"
 elif [ $# -eq 1 ]; then
     tag="${1:-}"
 else
     echo "usage: $(basename $0) [tag]" >&2
     exit 64
 fi
-
-. bin/_docker.sh
 
 docker_pull proxy        "${tag}"  || true
 docker_pull proxy-init   "${tag}"  || true

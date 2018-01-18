@@ -5,26 +5,11 @@ set -eu
 . bin/_docker.sh
 . bin/_tag.sh
 
-if [ $# -eq 0 ]; then
-    tag="$(clean_head_root_tag)"
-elif [ $# -eq 1 ]; then
-    tag="${1:-}"
-else
-    echo "usage: $(basename $0) [tag]" >&2
-    exit 64
-fi
-
 dockerfile=controller/Dockerfile
 
 validate_go_deps_tag $dockerfile
 
-(
-    unset DOCKER_FORCE_BUILD
-    bin/docker-build-base
-    bin/docker-build-go-deps
-) >/dev/null
+bin/docker-build-base 1>&2
+bin/docker-build-go-deps 1>&2
 
-docker_maybe_build . \
-    "$(docker_repo controller)" \
-    "${tag}" \
-    $dockerfile
+docker_build controller "$(head_root_tag)" $dockerfile
