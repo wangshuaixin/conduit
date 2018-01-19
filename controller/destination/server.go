@@ -109,6 +109,12 @@ func (s *server) Get(dest *common.Destination, stream pb.Destination_GetServer) 
 		}
 	}
 
+	// If this is an IP address, echo it back
+	err := s.echoIPDestination(host, port, stream)
+	if err == nil {
+		return nil
+	}
+
 	id, err := s.localKubernetesServiceIdFromDNSName(host)
 	if err != nil {
 		log.Error(err)
@@ -124,6 +130,29 @@ func (s *server) Get(dest *common.Destination, stream pb.Destination_GetServer) 
 	err = fmt.Errorf("cannot resolve service that isn't a local Kubernetes service: %s", host)
 	log.Error(err)
 	return err
+}
+
+func (s *server) echoIPDestination(host string, port int, stream pb.Destination_GetServer) error {
+	ip, err := util.ParseIPV4(host)
+	if err != nil {
+		return err
+	}
+	addrs := make([]common.TcpAddress, 1)
+	addrs[0] = common.TcpAddress{
+		Ip: ip,
+		Port: uint32(port),
+	}
+
+	update := &pb.Update{
+		Update: &pb.Update_Add{
+			Add: toWeightedAddrSet(addrs),
+		},
+	}
+	stream.Send(update)
+
+	<-stream.Context().Done()
+
+	return nil
 }
 
 func (s *server) resolveKubernetesService(id string, port int, stream pb.Destination_GetServer) error {
