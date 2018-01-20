@@ -7,13 +7,14 @@ import (
 	"strings"
 
 	"errors"
+	"reflect"
+
 	common "github.com/runconduit/conduit/controller/gen/common"
 	pb "github.com/runconduit/conduit/controller/gen/proxy/destination"
 	"github.com/runconduit/conduit/controller/k8s"
 	"github.com/runconduit/conduit/controller/util"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	"reflect"
 )
 
 type (
@@ -110,7 +111,7 @@ func (s *server) Get(dest *common.Destination, stream pb.Destination_GetServer) 
 	}
 
 	// If this is an IP address, echo it back
-	err := s.echoIPDestination(host, port, stream)
+	err := echoIPDestination(host, port, stream)
 	if err == nil {
 		return nil
 	}
@@ -132,14 +133,14 @@ func (s *server) Get(dest *common.Destination, stream pb.Destination_GetServer) 
 	return err
 }
 
-func (s *server) echoIPDestination(host string, port int, stream pb.Destination_GetServer) error {
+func echoIPDestination(host string, port int, stream pb.Destination_GetServer) error {
 	ip, err := util.ParseIPV4(host)
 	if err != nil {
 		return err
 	}
 	addrs := make([]common.TcpAddress, 1)
 	addrs[0] = common.TcpAddress{
-		Ip: ip,
+		Ip:   ip,
 		Port: uint32(port),
 	}
 

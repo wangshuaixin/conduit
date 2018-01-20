@@ -1,10 +1,29 @@
 package destination
 
 import (
+	"context"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	pb "github.com/runconduit/conduit/controller/gen/proxy/destination"
+	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc"
 )
+
+// must satisfy pb.Destination_GetServer
+type mockDstServer struct {
+	grpc.ServerStream
+}
+
+func (m *mockDstServer) Send(u *pb.Update) error {
+	return nil
+}
+
+func (m *mockDstServer) Context() context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	return ctx
+}
 
 func TestLocalKubernetesServiceIdFromDNSName(t *testing.T) {
 	ns_name := "ns/name"
@@ -85,6 +104,28 @@ func TestSplitDNSName(t *testing.T) {
 			result, err := splitDNSName(tc.input)
 			assert.Equal(t, tc.result, result)
 			assert.Equal(t, tc.resultErr, err != nil)
+		})
+	}
+}
+
+func TestEchoIPDestination(t *testing.T) {
+	testCases := []struct {
+		host   string
+		port   int
+		result bool
+	}{
+		{"8.8.8.8", 123, true},
+		{"example.com", 123, false},
+	}
+
+	server := mockDstServer{}
+
+	for i, tc := range testCases {
+		t.Run(fmt.Sprintf("%d: %+v %+v", i, tc.host, tc.port), func(t *testing.T) {
+			err := echoIPDestination(tc.host, tc.port, &server)
+			if (err == nil) != tc.result {
+				t.Fatalf("Unexpected result: %+v", err)
+			}
 		})
 	}
 }
